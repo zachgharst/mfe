@@ -42,8 +42,8 @@ func main() {
 }
 
 func help() {
-	fmt.Println("mass_file_editor: missing directory operand")
-	fmt.Println("Usage: mass_file_editor <directory>")
+	fmt.Printf("%s: missing directory operand\n", os.Args[0])
+	fmt.Printf("Usage: %s <directory>\n", os.Args[0])
 }
 
 // openEditorForModifications opens the file in the editor specified by envvar
