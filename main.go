@@ -24,7 +24,7 @@ func main() {
 	}
 
 	tempFile, err := createTempFile(files)
-    defer os.Remove(tempFile)
+	defer os.Remove(tempFile)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -32,13 +32,13 @@ func main() {
 
 	openEditorForModifications(tempFile)
 
-    modifications, err := calculateModifications(files, tempFile)
-    if err != nil {
-        fmt.Println(err)
-        return
-    }
+	modifications, err := calculateModifications(files, tempFile)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 
-	makeModifications(modifications, files)
+	makeModifications(files, modifications)
 }
 
 func help() {
@@ -46,6 +46,8 @@ func help() {
 	fmt.Println("Usage: mass_file_editor <directory>")
 }
 
+// openEditorForModifications opens the file in the editor specified by envvar
+// $EDITOR (fallback: vim)
 func openEditorForModifications(file string) {
 	editor := os.Getenv("EDITOR")
 	if editor == "" {
@@ -58,6 +60,8 @@ func openEditorForModifications(file string) {
 	cmd.Run()
 }
 
+// getAllFilesRecursively returns a list of all files in the directory and its
+// subdirectories; each is prepended with the default command "move"
 func getAllFiles(dir string) ([]string, error) {
 	var files []string
 
@@ -76,13 +80,14 @@ func getAllFiles(dir string) ([]string, error) {
 	return files, err
 }
 
-func createTempFile(files []string) (string, error) {
+// createTempFile creates a temporary file with the specified lines as content
+func createTempFile(lines []string) (string, error) {
 	tempFile, err := os.CreateTemp("", "mfe-")
 	if err != nil {
 		return "", err
 	}
 
-	_, err = tempFile.Write([]byte(strings.Join(files, "\n")))
+	_, err = tempFile.Write([]byte(strings.Join(lines, "\n")))
 	if err != nil {
 		return "", err
 	}
@@ -90,6 +95,8 @@ func createTempFile(files []string) (string, error) {
 	return tempFile.Name(), nil
 }
 
+// calculateModifications checks for problems in the modifications file and
+// returns the lines
 func calculateModifications(files []string, tempFile string) ([]string, error) {
 	modifications, err := os.ReadFile(tempFile)
 	if err != nil {
@@ -107,14 +114,16 @@ func calculateModifications(files []string, tempFile string) ([]string, error) {
 		return nil, errors.New("Do not add or remove lines from the file")
 	}
 
-    return lines, nil
+	return lines, nil
 }
 
-func makeModifications(lines []string, files []string) {
-	for i := range lines {
-		if lines[i] != files[i] {
-			_, beforeFile, _ := strings.Cut(files[i], " ")
-			afterVerb, afterFile, _ := strings.Cut(lines[i], " ")
+// makeModifications compares the diff; then, it moves or deletes the files as
+// specified
+func makeModifications(before []string, after []string) {
+	for i := range after {
+		if after[i] != before[i] {
+			_, beforeFile, _ := strings.Cut(before[i], " ")
+			afterVerb, afterFile, _ := strings.Cut(after[i], " ")
 
 			if afterVerb == "move" || afterVerb == "m" {
 				fmt.Printf("Moving %s to %s\n", beforeFile, afterFile)
